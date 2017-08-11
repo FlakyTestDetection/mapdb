@@ -1,6 +1,7 @@
 package org.mapdb;
 
 import org.jetbrains.annotations.NotNull;
+import org.mapdb.util.DataIO;
 import org.mapdb.volume.Volume;
 import org.mapdb.volume.VolumeFactory;
 
@@ -889,7 +890,7 @@ public class WriteAheadLog {
             try {
                 in.readFully(data);
             } catch (IOException e) {
-                throw new DBException.VolumeIOError(e);
+                throw new DBException.VolumeIOException(e);
             }
             return data;
         }

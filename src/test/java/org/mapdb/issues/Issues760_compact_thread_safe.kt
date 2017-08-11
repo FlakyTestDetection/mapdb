@@ -3,6 +3,8 @@ package org.mapdb.issues
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mapdb.*
+import org.mapdb.store.*
+import org.mapdb.util.DataIO
 import org.mapdb.volume.RandomAccessFileVol
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,9 +27,11 @@ class Issues760_compact_thread_safe {
 
 
     fun compactShouldBeThreadSafe(tx:Boolean, withCompactThread:Boolean) {
-        val entries = 1000
-        val initValue = 1000
-        val updateCount = 100
+        if(TT.shortTest())
+            return
+        val entries = 10000
+        val initValue = 10000
+        val updateCount = 1000
         val end = AtomicBoolean(withCompactThread)
 
         val db1 = TT.tempFile()
@@ -100,10 +104,13 @@ class Issues760_compact_thread_safe {
     //due to compact thread loop
 
     fun compactShouldBeThreadSafeWhenUsedByDB(tx:Boolean, withCompactThread:Boolean) {
+        if(TT.shortTest())
+            return
+
         val db1 = TT.tempFile()
 
-        val entries = 1000
-        val initValue = 1000
+        val entries = 10000
+        val initValue = 10000
         val expectedFinalValue = initValue + 5
         val end = AtomicBoolean(withCompactThread)
 

@@ -5,9 +5,10 @@ package org.mapdb.serializer
 import org.junit.Assert.*
 import org.junit.Test
 import org.mapdb.*
+import org.mapdb.tree.BTreeMap
+import org.mapdb.util.DataIO
 import java.io.Serializable
-import java.math.BigDecimal
-import java.math.BigInteger
+import java.math.*
 import java.util.*
 
 abstract class SerializerTest<E> {
@@ -22,7 +23,7 @@ abstract class SerializerTest<E> {
     abstract val serializer: Serializer<E>
 
 
-    val max = 1000L + TT.testScale() * 1000*10
+    val max = 100L + TT.testScale() * 10000
     val arraySize = 10 + TT.testScale() * 100
 
     fun assertSerEquals(v1: Any?, v2: Any?) {
@@ -90,7 +91,8 @@ abstract class GroupSerializerTest<E>:SerializerTest<E>(){
 
 
 
-    @Test open fun valueArrayBinarySearch(){
+    @Test
+    open fun valueArrayBinarySearch(){
         var v = ArrayList<E>()
         for (i in 0..max) {
             v.add(randomValue())
@@ -127,7 +129,8 @@ abstract class GroupSerializerTest<E>:SerializerTest<E>(){
         }
     }
 
-    @Test open fun valueArrayGet(){
+    @Test
+    open fun valueArrayGet(){
         var v = randomArray()
         val keys = serializer2.valueArrayFromArray(v)
         val out = DataOutput2()

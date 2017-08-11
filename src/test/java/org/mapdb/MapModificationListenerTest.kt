@@ -2,6 +2,8 @@ package org.mapdb
 
 import org.junit.Assert
 import org.junit.Test
+import org.mapdb.tree.BTreeMap
+import org.mapdb.tree.HTreeMap
 import java.util.*
 
 /**
@@ -10,7 +12,7 @@ import java.util.*
 
 abstract class MapModificationListenerTest:MapModificationListener<Int,String> {
 
-    abstract fun makeMap(): MapExtra<Int, String>
+    abstract fun makeMap(): DBConcurrentMap<Int, String>
 
     val map = makeMap()
 
@@ -131,14 +133,14 @@ abstract class MapModificationListenerTest:MapModificationListener<Int,String> {
     }
 
     class HTreeMapModListenerTest:MapModificationListenerTest(){
-        override fun makeMap(): MapExtra<Int, String>  = HTreeMap.make(
+        override fun makeMap(): DBConcurrentMap<Int, String>  = HTreeMap.make(
                 keySerializer = Serializer.INTEGER, valueSerializer = Serializer.STRING,
                 modificationListeners = arrayOf(this as MapModificationListener<Int, String>))
 
     }
 
     class BTreeMapModListenerTest:MapModificationListenerTest(){
-        override fun makeMap(): MapExtra<Int, String>  = BTreeMap.make(
+        override fun makeMap(): DBConcurrentMap<Int, String>  = BTreeMap.make(
                 keySerializer = Serializer.INTEGER, valueSerializer = Serializer.STRING,
                 modificationListeners = arrayOf(this as MapModificationListener<Int, String>))
 

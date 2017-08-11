@@ -1,10 +1,10 @@
 package org.mapdb.crash
 
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import org.junit.Assert.*
 import org.mapdb.*
-import org.mapdb.crash.CrashJVM
+import org.mapdb.store.*
+import java.io.File
 
 /**
  * Check of commits are durable and survive JVM crash (kill PID -9)
@@ -38,7 +38,11 @@ abstract class StoreCrashTest: CrashJVM(){
         return seed;
     }
 
-    @Test fun crashTest(){
+    @Test
+    fun crashTest(){
+        if(TT.shortTest())
+            return
+
         val store = openStore(File(getTestDir(), "store"))
         val recid = store.put(0L, Serializer.LONG)
         store.commit()

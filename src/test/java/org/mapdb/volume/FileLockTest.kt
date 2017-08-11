@@ -6,6 +6,9 @@ import org.mapdb.TT
 class FileLockTest{
 
     @Test fun lock_disable(){
+        if (TT.shortTest())
+            return
+
         val f = TT.tempFile()
         FileChannelVol.FACTORY.makeVolume(f.path, false)
         FileChannelVol.FACTORY.makeVolume(f.path, false, -1)
@@ -15,6 +18,9 @@ class FileLockTest{
 
     @Test(timeout=10000L)
     fun lock_wait(){
+        if (TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val c = FileChannelVol.FACTORY.makeVolume(f.path, false)
         TT.fork{

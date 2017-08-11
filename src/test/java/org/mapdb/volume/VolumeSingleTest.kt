@@ -1,12 +1,10 @@
 package org.mapdb.volume
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import org.mapdb.*
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.IOException
+import org.mapdb.util.DataIO
+import java.io.*
 import java.util.*
 
 @org.junit.runner.RunWith(org.junit.runners.Parameterized::class)
@@ -168,7 +166,11 @@ class VolumeSingleTest(val fab: Function1<String, Volume>) {
         }
     }
 
-    @Test fun parallel_growth(){
+    @Test
+    fun parallel_growth(){
+        if (TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val vol = fab.invoke(f.path)
         val max = 40000000
@@ -188,7 +190,11 @@ class VolumeSingleTest(val fab: Function1<String, Volume>) {
     }
 
 
-    @Test fun copyFromDb(){
+    @Test
+    fun copyFromDb(){
+        if (TT.shortTest())
+            return
+
         val volMem = ByteArrayVol()
         val db = DBMaker.volumeDB(volMem, false).make()
         val s = db.treeSet("aa",Serializer.STRING).createOrOpen()

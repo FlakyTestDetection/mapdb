@@ -2,7 +2,7 @@ package org.mapdb.volume;
 
 import org.jetbrains.annotations.Nullable;
 import org.mapdb.CC;
-import org.mapdb.DataIO;
+import org.mapdb.util.DataIO;
 import org.mapdb.DataInput2;
 
 import java.io.File;
@@ -160,7 +160,7 @@ public class UnsafeVolume extends Volume {
         //*LOG*/ System.err.flush();
         if(hasLimit && offset>sizeLimit) {
             //return false;
-            throw new IllegalAccessError("too big"); //TODO size limit here
+            throw new IllegalStateException("too big"); //TODO size limit here
         }
 
 

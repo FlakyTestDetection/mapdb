@@ -27,7 +27,7 @@ interface StoreImmutable {
  * Stores records, mutable version
  */
 interface Store: StoreImmutable, Verifiable,
-        ConcurrencyAware { //TODO put assertions for underlying collections and Volumes
+        ConcurrencyAware {
 
     fun preallocate():Long;
 
@@ -63,5 +63,5 @@ interface StoreTx:Store{
 
 interface StoreBinary:Store{
 
-    fun getBinaryLong(recid:Long, f:StoreBinaryGetLong):Long
+    fun getBinaryLong(recid:Long, f: StoreBinaryGetLong):Long
 }

@@ -2,6 +2,7 @@ package org.mapdb.issues;
 
 import org.junit.Test;
 import org.mapdb.*;
+import org.mapdb.tree.BTreeMap;
 
 import static org.junit.Assert.assertEquals;
 
@@ -10,11 +11,14 @@ public class Issue743Test {
 
     @Test
     public void testAfterClear_Integer(){
+        if(TT.shortTest())
+            return;
+
         DB db = DBMaker.memoryDB()
                 .closeOnJvmShutdown()
                 .make();
 
-        BTreeMap<Integer,String> testMap = db.treeMap("test",
+        DBConcurrentNavigableMap<Integer,String> testMap = db.treeMap("test",
                 Serializer.INTEGER,
                 Serializer.JAVA )
                 .counterEnable()
@@ -52,7 +56,7 @@ public class Issue743Test {
                 .closeOnJvmShutdown()
                 .make();
 
-        BTreeMap<Long,String> testMap = db.treeMap("test2",
+        BTreeMap<Long,String> testMap = (BTreeMap<Long, String>) db.treeMap("test2",
                 Serializer.LONG,
                 Serializer.STRING )
                 .counterEnable().createOrOpen();

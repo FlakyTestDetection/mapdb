@@ -1,6 +1,7 @@
 package org.mapdb;
 
 import org.junit.Test;
+import org.mapdb.util.DataIO;
 import org.mapdb.volume.SingleByteArrayVol;
 import org.mapdb.volume.Volume;
 
@@ -10,7 +11,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.*;
-import static org.mapdb.DataIO.*;
+import static org.mapdb.util.DataIO.*;
 
 public class DataIOTest {
 
@@ -203,7 +204,11 @@ public class DataIOTest {
         assertTrue(-1L != DataIO.intToLong(-1));
     }
 
-    @Test public void packedLong_volume() throws IOException {
+    @Test
+    public void packedLong_volume() throws IOException {
+        if(TT.shortTest())
+            return;
+
         DataOutput2 out = new DataOutput2();
         DataInput2.ByteArray in = new DataInput2.ByteArray(out.buf);
         Volume v = new SingleByteArrayVol(out.buf);

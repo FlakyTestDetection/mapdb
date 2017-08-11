@@ -1,5 +1,7 @@
 package org.mapdb
 
+import org.mapdb.store.*
+import org.mapdb.util.DataIO
 import org.mapdb.volume.*
 import java.io.File
 

@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mapdb.CC;
 import org.mapdb.DBException;
-import org.mapdb.DataIO;
+import org.mapdb.util.DataIO;
 import org.mapdb.DataInput2;
 
 import java.io.*;
@@ -58,7 +58,7 @@ public abstract class Volume implements Closeable{
                 return i;
             }
         }
-        throw new AssertionError("Could not find sliceShift");
+        throw new IllegalStateException("Could not find sliceShift");
     }
 
     static boolean isEmptyFile(String fileName) {
@@ -333,7 +333,7 @@ public abstract class Volume implements Closeable{
         try {
             getDataInput(inputOffset, (int) size).readFully(data);
         }catch(IOException e){
-            throw new DBException.VolumeIOError(e);
+            throw new DBException.VolumeIOException(e);
         }
         target.putData(targetOffset,data,0, (int) size);
     }
@@ -406,7 +406,7 @@ public abstract class Volume implements Closeable{
                 offset+=read;
             }
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new DBException.VolumeIOException(e);
         }
     }
 
@@ -427,7 +427,7 @@ public abstract class Volume implements Closeable{
             try {
                 output.write(buf, 0, size);
             } catch (IOException e) {
-                throw new IOError(e);
+                throw new DBException.VolumeIOException(e);
             }
         }
     }
@@ -495,7 +495,7 @@ public abstract class Volume implements Closeable{
                     throw new DBException.FileLocked(file.toPath(), e);
                 }
             } catch (IOException e) {
-                throw new DBException.VolumeIOError(e);
+                throw new DBException.VolumeIOException(e);
             }
 
             if (fileLockWait <= 0) {

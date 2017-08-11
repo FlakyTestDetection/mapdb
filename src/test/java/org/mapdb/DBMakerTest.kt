@@ -1,16 +1,13 @@
 package org.mapdb
 
+import org.junit.*
 import org.junit.Assert.*
-import org.junit.Rule
-import org.junit.Test
 import org.junit.rules.ExpectedException
-import org.mapdb.StoreAccess.volume
 import org.mapdb.VolumeAccess.sliceShift
 import org.mapdb.elsa.Bean1
-import org.mapdb.volume.ByteArrayVol
-import org.mapdb.volume.FileChannelVol
-import org.mapdb.volume.MappedFileVol
-import org.mapdb.volume.RandomAccessFileVol
+import org.mapdb.store.*
+import org.mapdb.util.DataIO
+import org.mapdb.volume.*
 import java.util.*
 
 class DBMakerTest{
@@ -119,6 +116,9 @@ class DBMakerTest{
 
     @Test(timeout=10000)
     fun file_lock_wait(){
+        if(TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val db1 = DBMaker.fileDB(f).make()
         TT.fork{
@@ -133,6 +133,9 @@ class DBMakerTest{
 
     @Test(timeout=10000)
     fun file_lock_wait2(){
+        if(TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val db1 = DBMaker.fileDB(f).make()
         TT.fork{
@@ -146,6 +149,9 @@ class DBMakerTest{
 
     @Test(timeout=10000)
     fun file_lock_wait_time_out_same_jvm() {
+        if(TT.shortTest())
+            return
+
         val f = TT.tempFile()
 
         val db1 = DBMaker.fileDB(f)
@@ -164,6 +170,9 @@ class DBMakerTest{
 
     @Test(timeout=10000)
     fun file_lock_wait_time_out() {
+        if(TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val db1 = DBMaker.fileDB(f).make()
         TT.fork {
@@ -183,6 +192,9 @@ class DBMakerTest{
 
     @Test(timeout=30000)
     fun file_lock_wait_time_out_different_jvm() {
+        if(TT.shortTest())
+            return
+
         val f = TT.tempFile()
         val process = TT.forkJvm(ForkedLockTestMain::class.java, f.absolutePath)
 

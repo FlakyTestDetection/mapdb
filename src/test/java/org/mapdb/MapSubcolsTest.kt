@@ -1,17 +1,16 @@
 package org.mapdb
 
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import org.junit.Test
-import org.mapdb.serializer.SerializerByteArray
-import org.mapdb.serializer.SerializerIntArray
+import org.mapdb.serializer.*
+import org.mapdb.tree.BTreeMap
 import java.util.*
 
 /**
  * test if map keyset, values and entrySet correctly use Serializer.hashcode and Serializer.equals
  */
 //TODO this needs more work, better way to mock serializer statistics
-class MapSubcolsTest{
+abstract class MapSubcolsTest{
 
     var keyEqCount = 0
     var keyHashCount = 0
@@ -22,14 +21,11 @@ class MapSubcolsTest{
             return super.equals(first, second)
         }
 
-
-
         override fun hashCode(o: ByteArray, seed: Int): Int {
             keyHashCount++
             return super.hashCode(o, seed)
         }
     }
-
 
     var valEqCount = 0
     var valHashCount = 0
@@ -87,16 +83,16 @@ class MapSubcolsTest{
     }
 
 
-    @Test @Ignore
+    @Test
     fun hashMap(){
         test(DBMaker.memoryDB().make().hashMap("aa", keyser, valser).create())
     }
 
 
-    @Test @Ignore
+    @Test
     fun treeMap(){
-        val m = DBMaker.memoryDB().make().treeMap("aa", keyser, valser).create()
-        assert(m.keySerializer == m.comparator)
+        val m = DBMaker.memoryDB().make().treeMap("aa", keyser, valser).create() as BTreeMap
+        assert(m.keySerializer == m.comparator())
         test(m)
     }
 }

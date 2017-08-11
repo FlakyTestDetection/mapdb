@@ -1,14 +1,14 @@
 package org.mapdb.issues
 
-import java.util.stream.IntStream
-
-import org.junit.Test
-
 import org.junit.Assert.assertEquals
+import org.junit.Test
 import org.mapdb.*
+import org.mapdb.DBMaker.StoreType.*
+import org.mapdb.tree.BTreeMap
+import org.mapdb.tree.HTreeMap
 import java.io.Closeable
 import java.util.*
-import org.mapdb.DBMaker.StoreType.*
+import java.util.stream.IntStream
 
 @org.junit.runner.RunWith(org.junit.runners.Parameterized::class)
 class ParallelMaps(val fab:()-> MutableMap<Any,Any>) {
@@ -75,7 +75,7 @@ class ParallelMaps(val fab:()-> MutableMap<Any,Any>) {
         val tmp = fab();
 
         if(tmp is ConcurrencyAware)
-            tmp.checkThreadSafe()
+            tmp.assertThreadSafe()
 
         val size = 1000
         IntStream.rangeClosed(1, size).parallel().forEach { i -> tmp.put(i, 11) }

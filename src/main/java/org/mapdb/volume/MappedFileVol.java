@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mapdb.CC;
 import org.mapdb.DBException;
-import org.mapdb.DataIO;
+import org.mapdb.util.DataIO;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,7 +110,7 @@ public final class MappedFileVol extends ByteBufferVol {
                 slices = new ByteBuffer[0];
             }
         } catch (IOException e) {
-            throw new DBException.VolumeIOError(e);
+            throw new DBException.VolumeIOException(e);
         }
     }
 
@@ -152,7 +152,7 @@ public final class MappedFileVol extends ByteBufferVol {
 
             slices = slices2;
         } catch (IOException e) {
-            throw new DBException.VolumeIOError(e);
+            throw new DBException.VolumeIOException(e);
         } finally {
             growLock.unlock();
         }
@@ -188,7 +188,7 @@ public final class MappedFileVol extends ByteBufferVol {
             slices = null;
 
         } catch (IOException e) {
-            throw new DBException.VolumeIOError(e);
+            throw new DBException.VolumeIOException(e);
         } finally {
             growLock.unlock();
         }
@@ -282,7 +282,7 @@ public final class MappedFileVol extends ByteBufferVol {
             try {
                 fileChannel.truncate(1L * sliceSize * maxSize);
             } catch (IOException e) {
-                throw new DBException.VolumeIOError(e);
+                throw new DBException.VolumeIOException(e);
             }
 
             if (ByteBufferVol.windowsWorkaround) {
@@ -294,7 +294,7 @@ public final class MappedFileVol extends ByteBufferVol {
                 }
             }
         } catch (IOException e) {
-            throw new DBException.VolumeIOError(e);
+            throw new DBException.VolumeIOException(e);
         } finally {
             growLock.unlock();
         }

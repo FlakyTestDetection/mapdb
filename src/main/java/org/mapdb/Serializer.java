@@ -17,6 +17,7 @@ package org.mapdb;
 
 import org.jetbrains.annotations.NotNull;
 import org.mapdb.serializer.*;
+import org.mapdb.util.DataIO;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -304,11 +305,11 @@ public interface Serializer<A /*extends Comparable<? super A>*/> extends Compara
 
     /**
      * A predefined {@link Serializer} that always throws an
-     * {@link IllegalAccessError} when invoked.
+     * {@link UnsupportedOperationException} when invoked.
      * <p>
      * This serializer can be used for testing and assertions.
      */
-    GroupSerializer<Object> ILLEGAL_ACCESS = new SerializerIllegalAccess();
+    GroupSerializer<Object> SERIALIZER_UNSUPPORTED = new SerializerUnsupported();
 
     /**
      * Serializes {@code byte[]} it adds header which contains size information

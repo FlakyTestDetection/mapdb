@@ -1,28 +1,21 @@
 package org.mapdb
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
-import org.eclipse.collections.api.map.primitive.MutableLongLongMap
-import org.eclipse.collections.api.map.primitive.MutableLongValuesMap
+import com.google.common.cache.*
+import org.eclipse.collections.api.map.primitive.*
 import org.eclipse.collections.impl.list.mutable.primitive.LongArrayList
 import org.mapdb.elsa.*
 import org.mapdb.elsa.ElsaSerializerPojo.ClassInfo
-import org.mapdb.serializer.GroupSerializer
-import org.mapdb.serializer.GroupSerializerObjectArray
-import org.mapdb.serializer.GroupSerializerWrapper
+import org.mapdb.queue.QueueLong
+import org.mapdb.serializer.*
+import org.mapdb.tree.*
 import org.mapdb.tuple.*
-import java.io.Closeable
-import java.io.DataInput
-import java.io.DataOutput
-import java.lang.ref.Reference
-import java.lang.ref.WeakReference
-import java.math.BigDecimal
-import java.math.BigInteger
+import org.mapdb.util.*
+import java.io.*
+import java.lang.ref.*
+import java.math.*
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.logging.Level
@@ -159,7 +152,7 @@ open class DB(
 
     protected fun checkNotClosed(){
         if(closed.get())
-            throw IllegalAccessError("DB was closed")
+            throw IllegalStateException("DB was closed")
     }
 
     /** Already loaded named collections. Values are weakly referenced. We need singletons for locking */
@@ -187,7 +180,7 @@ open class DB(
     private val nameSer = object:ElsaSerializerBase.Serializer<Any>(){
         override fun serialize(out: DataOutput, value: Any, objectStack: ElsaStack?) {
             val name = getNameForObject(value)
-                    ?: throw DBException.SerializationError("Could not serialize named object, it was not instantiated by this db")
+                    ?: throw DBException.SerializationException("Could not serialize named object, it was not instantiated by this db")
 
             out.writeUTF(name)
         }
@@ -370,7 +363,7 @@ open class DB(
                 Serializer.STRING_DELTA2, Serializer.STRING_INTERN, Serializer.STRING_ASCII, Serializer.STRING_NOSIZE,
                 Serializer.LONG, Serializer.LONG_PACKED, Serializer.LONG_DELTA, Serializer.INTEGER,
                 Serializer.INTEGER_PACKED, Serializer.INTEGER_DELTA, Serializer.BOOLEAN, Serializer.RECID,
-                Serializer.RECID_ARRAY, Serializer.ILLEGAL_ACCESS, Serializer.BYTE_ARRAY, Serializer.BYTE_ARRAY_DELTA,
+                Serializer.RECID_ARRAY, Serializer.SERIALIZER_UNSUPPORTED, Serializer.BYTE_ARRAY, Serializer.BYTE_ARRAY_DELTA,
                 Serializer.BYTE_ARRAY_DELTA2, Serializer.BYTE_ARRAY_NOSIZE, Serializer.CHAR_ARRAY, Serializer.INT_ARRAY,
                 Serializer.LONG_ARRAY, Serializer.DOUBLE_ARRAY, Serializer.JAVA, Serializer.ELSA, Serializer.UUID,
                 Serializer.BYTE, Serializer.FLOAT, Serializer.DOUBLE, Serializer.SHORT, Serializer.SHORT_ARRAY,
@@ -397,7 +390,7 @@ open class DB(
     protected val executors:MutableSet<ExecutorService> = Collections.synchronizedSet(LinkedHashSet())
 
     fun nameCatalogLoad():SortedMap<String, String> {
-        return Utils.lockRead(lock){
+        return lock.lockRead{
             checkNotClosed()
             nameCatalogLoadLocked()
         }
@@ -405,13 +398,13 @@ open class DB(
     }
     protected fun nameCatalogLoadLocked():SortedMap<String, String> {
         if(CC.ASSERT)
-            Utils.assertReadLock(lock)
+            lock.assertReadLock()
         return store.get(CC.RECID_NAME_CATALOG, NAME_CATALOG_SERIALIZER)
                 ?: throw DBException.WrongConfiguration("Could not open store, it has no Named Catalog");
     }
 
     fun nameCatalogSave(nameCatalog: SortedMap<String, String>) {
-        Utils.lockWrite(lock){
+        lock.lockWrite{
             checkNotClosed()
             nameCatalogSaveLocked(nameCatalog)
         }
@@ -419,7 +412,7 @@ open class DB(
 
     protected fun nameCatalogSaveLocked(nameCatalog: SortedMap<String, String>) {
         if(CC.ASSERT)
-            Utils.assertWriteLock(lock)
+            lock.assertWriteLock()
         store.update(CC.RECID_NAME_CATALOG, nameCatalog, NAME_CATALOG_SERIALIZER)
     }
 
@@ -477,7 +470,7 @@ open class DB(
 
     private fun unknownClassesSave(){
         if(CC.ASSERT)
-            Utils.assertWriteLock(lock)
+            lock.assertWriteLock()
         //TODO batch class dump
         unknownClasses.forEach {
             defaultSerializerRegisterClass_noLock(it)
@@ -486,7 +479,7 @@ open class DB(
     }
 
     fun commit(){
-        Utils.lockWrite(lock) {
+        lock.lockWrite{
             checkNotClosed()
             unknownClassesSave()
             store.commit()
@@ -498,7 +491,7 @@ open class DB(
         if(store !is StoreTx)
             throw UnsupportedOperationException("Store does not support rollback")
 
-        Utils.lockWrite(lock) {
+        lock.lockWrite {
             checkNotClosed()
             unknownClasses.clear()
             store.rollback()
@@ -515,7 +508,7 @@ open class DB(
         if(shutdownReference!=null)
             shutdownHooks.remove(shutdownReference)
 
-        Utils.lockWrite(lock) {
+        lock.lockWrite {
             unknownClassesSave()
 
             //shutdown running executors if any
@@ -532,7 +525,7 @@ open class DB(
     }
 
     fun <E> get(name:String):E{
-        Utils.lockWrite(lock) {
+        lock.lockWrite {
             checkNotClosed()
             val type = nameCatalogGet(name + Keys.type)
             val ret:Any? = when (type) {
@@ -562,7 +555,7 @@ open class DB(
             namesInstanciated.asMap().filterValues { it===e }.keys.firstOrNull()
 
     fun exists(name: String): Boolean {
-        Utils.lockRead(lock) {
+        lock.lockRead {
             checkNotClosed()
             return nameCatalogGet(name + Keys.type) != null
         }
@@ -580,7 +573,7 @@ open class DB(
     }
 
     fun delete(name:String){
-        Utils.lockWrite(lock) {
+        lock.lockWrite {
 
             val params = nameCatalogParamsFor(name)
             if (params.isEmpty())
@@ -947,7 +940,7 @@ open class DB(
         db:DB,
         name:String,
         storeFactory:(segment:Int)->Store = {_-> db.store}
-    ):HTreeMapMaker<K,V,HTreeMap<K,V>>(db,name,true,storeFactory){
+    ):HTreeMapMaker<K,V,DBConcurrentMap<K,V>>(db,name,true,storeFactory){
 
         fun <A> keySerializer(keySerializer:Serializer<A>):HashMapMaker<A,V>{
             @Suppress("UNCHECKED_CAST")
@@ -1106,7 +1099,7 @@ open class DB(
 
 
 
-    abstract class TreeMapSink<K,V>:Pump.Sink<Pair<K,V>, BTreeMap<K,V>>(){
+    abstract class TreeMapSink<K,V>:Pump.Sink<Pair<K,V>, DBConcurrentNavigableMap<K,V>>(){
 
         fun put(key:K, value:V) {
             put(Pair(key, value))
@@ -1119,7 +1112,7 @@ open class DB(
         }
     }
 
-    abstract class TreeSetSink<E>:Pump.Sink<E, NavigableSet<E>>(){}
+    abstract class TreeSetSink<E>:Pump.Sink<E, DBNavigableSet<E>>(){}
 
     abstract class BTreeMapMaker<K,V,MAP>(
              db:DB,
@@ -1162,7 +1155,7 @@ open class DB(
              catalog[name + Keys.rootRecidRecid] = rootRecidRecid2.toString()
 
              val counterRecid2 =
-                     if (_counterEnable) _counterRecid ?: db.store.put(0L, Serializer.LONG)
+                     if (_counterEnable) _counterRecid ?: db.store.put(0L, Serializer.LONG_PACKED)
                      else 0L
              catalog[name + Keys.counterRecid] = counterRecid2.toString()
 
@@ -1247,7 +1240,7 @@ open class DB(
     class TreeMapMaker<K,V>(
             db:DB,
             name:String
-    ):BTreeMapMaker<K,V,BTreeMap<K,V>>(db,name,hasValues=true){
+    ):BTreeMapMaker<K,V,DBConcurrentNavigableMap<K,V>>(db,name,hasValues=true){
 
         fun <A> keySerializer(keySerializer:Serializer<A>):TreeMapMaker<A,V>{
             _keySerializer = GroupSerializerWrapper.wrap(keySerializer)
@@ -1298,7 +1291,7 @@ open class DB(
             return this as TreeMapMaker<A,V>
         }
 
-        fun createFrom(iterator:Iterator<Pair<K,V>>):BTreeMap<K,V>{
+        fun createFrom(iterator:Iterator<Pair<K,V>>):DBConcurrentNavigableMap<K,V>{
             val consumer = createFromSink()
             while(iterator.hasNext()){
                 consumer.put(iterator.next())
@@ -1306,9 +1299,9 @@ open class DB(
             return consumer.create()
         }
 
-        fun createFrom(source:Iterable<Pair<K,V>>):BTreeMap<K,V> = createFrom(source.iterator())
+        fun createFrom(source:Iterable<Pair<K,V>>):DBConcurrentNavigableMap<K,V> = createFrom(source.iterator())
 
-        fun createFrom(source:SortedMap<K,V>):BTreeMap<K,V>{
+        fun createFrom(source:SortedMap<K,V>):DBConcurrentNavigableMap<K,V>{
             val consumer = createFromSink()
             for(e in source){
                 consumer.put(e.key, e.value)
@@ -1334,12 +1327,12 @@ open class DB(
                     consumer.put(e)
                 }
 
-                override fun create(): BTreeMap<K, V> {
+                override fun create(): DBConcurrentNavigableMap<K, V> {
                     consumer.create()
                     this@TreeMapMaker._rootRecidRecid = consumer.rootRecidRecid
-                            ?: throw AssertionError()
+                            ?: throw IllegalStateException()
                     this@TreeMapMaker._counterRecid =
-                            if(_counterEnable) db.store.put(consumer.counter, Serializer.LONG)
+                            if(_counterEnable) db.store.put(consumer.counter, Serializer.LONG_PACKED)
                             else 0L
                     return this@TreeMapMaker.make2(create=true)
                 }
@@ -1359,7 +1352,7 @@ open class DB(
     class TreeSetMaker<E>(
             db:DB,
             name:String
-    ) :BTreeMapMaker<E, Boolean, NavigableSet<E>>(db,name,hasValues=false){
+    ) :BTreeMapMaker<E, Boolean, DBNavigableSet<E>>(db,name,hasValues=false){
 
 
         fun <A> serializer(serializer:Serializer<A>):TreeSetMaker<A>{
@@ -1412,12 +1405,12 @@ open class DB(
                     consumer.put(Pair(e, true))
                 }
 
-                override fun create(): NavigableSet<E> {
+                override fun create(): DBNavigableSet<E> {
                     consumer.create()
                     this@TreeSetMaker._rootRecidRecid = consumer.rootRecidRecid
-                            ?: throw AssertionError()
+                            ?: throw IllegalStateException()
                     this@TreeSetMaker._counterRecid =
-                            if(_counterEnable) db.store.put(consumer.counter, Serializer.LONG)
+                            if(_counterEnable) db.store.put(consumer.counter, Serializer.LONG_PACKED)
                             else 0L
                     return this@TreeSetMaker.make2(create=true)
                 }
@@ -1459,7 +1452,7 @@ open class DB(
             db:DB,
             name:String,
             storeFactory:(segment:Int)->Store = {_-> db.store}
-    ) :HTreeMapMaker<E, Void, HTreeMap.KeySet<E>>(db,name, false, storeFactory){
+    ) :HTreeMapMaker<E, Void, DBSet<E>>(db,name, false, storeFactory){
 
         init{
             @Suppress("UNCHECKED_CAST")
@@ -1601,7 +1594,7 @@ open class DB(
         open fun open():E = make2( false)
 
         protected fun make2(create:Boolean?):E{
-            Utils.lockWrite(db.lock){
+            db.lock.lockWrite{
                 db.checkNotClosed()
                 verify()
 
@@ -1667,8 +1660,9 @@ open class DB(
             val recid = catalog[name+Keys.recid]!!.toLong()
             return Atomic.Integer(db.store, recid)
         }
+        //TODO NOT NEGATIVE option
 
-        override fun create()= make2(true)
+        override fun create() = make2(true)
         override fun createOrOpen() = make2(null)
         override fun open() = make2(false)
     }
@@ -1679,19 +1673,19 @@ open class DB(
 
 
 
-    class AtomicLongMaker(db:DB, name:String, protected val value:Long=0):Maker<Atomic.Long>(db, name, "AtomicLong"){
+    class AtomicLongMaker(db:DB, name:String, val value:Long=0):Maker<Atomic.Long>(db, name, "AtomicLong"){
 
         override fun awareItems(): Array<Any?> = arrayOf()
 
         override fun create2(catalog: SortedMap<String, String>): Atomic.Long {
             val recid = db.store.put(value, Serializer.LONG)
             catalog[name+Keys.recid] = recid.toString()
-            return Atomic.Long(db.store, recid)
+            return Atomic.Long(db.store, recid, false) //TODO param for not negative
         }
 
         override fun open2(catalog: SortedMap<String, String>): Atomic.Long {
             val recid = catalog[name+Keys.recid]!!.toLong()
-            return Atomic.Long(db.store, recid)
+            return Atomic.Long(db.store, recid, false)
         }
 
         override fun create()= make2(true)
@@ -1936,10 +1930,10 @@ open class DB(
     fun indexTreeList(name: String) = IndexTreeListMaker<Any?>(this, name, defaultSerializer as Serializer<Any?>)
 
 
-    override fun checkThreadSafe() {
-        super.checkThreadSafe()
+    override fun assertThreadSafe() {
+        super.assertThreadSafe()
         if(store.isThreadSafe.not())
-            throw AssertionError()
+            throw IllegalStateException()
     }
 
     /**
@@ -1947,14 +1941,14 @@ open class DB(
      * and will save space for collections which do not use specialized serializer.
      */
     fun defaultSerializerRegisterClass(clazz:Class<*>){
-        Utils.lockWrite(lock) {
+        lock.lockWrite {
             checkNotClosed()
             defaultSerializerRegisterClass_noLock(clazz)
         }
     }
     private fun defaultSerializerRegisterClass_noLock(clazz:Class<*>) {
         if(CC.ASSERT)
-            Utils.assertWriteLock(lock)
+            lock.assertWriteLock()
         var infos = loadClassInfos()
         val className = clazz.name
         if (infos.find { it.name == className } != null)
