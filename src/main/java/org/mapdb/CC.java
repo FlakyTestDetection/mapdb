@@ -13,8 +13,6 @@ public interface CC{
     boolean LOG = true;
 
     /** compile MapDB with assertions enabled*/
-    boolean ASSERT = true;
-    /** compile MapDB with paranoid mode enabled */
     boolean PARANOID = false;
 
     /**
